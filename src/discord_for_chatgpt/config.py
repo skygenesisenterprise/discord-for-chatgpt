@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,22 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     environment: str = "development"
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str, info) -> str:
+        env = info.data.get("environment", "development")
+        if env == "production" and v in ("change-me-in-production", "", "secret", "changeme"):
+            raise ValueError("Insecure secret_key in production")
+        return v
+
+    @field_validator("encryption_key")
+    @classmethod
+    def validate_encryption_key(cls, v: str, info) -> str:
+        env = info.data.get("environment", "development")
+        if env == "production" and not v:
+            raise ValueError("encryption_key required in production")
+        return v
 
 
 settings = Settings()
